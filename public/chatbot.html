@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastGPT Chatbot</title>
+    <style>
+        :root {
+            --border-radius: 8px;
+            --user-bg: #007bff;
+            --bot-bg: #f1f1f1;
+            --text-light: #fff;
+            --text-dark: #333;
+            --primary-color: #007bff;
+            --header-bg: #007bff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: transparent;
+            overflow: hidden; /* 防止页面出现滚动条 */
+        }
+        #chat-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            background: #fff;
+            overflow: hidden;
+            position: relative;
+            /* 添加过渡动画 */
+            transition: transform 0.3s ease;
+            transform: scale(1);
+        }
+        #chat-header {
+            background-color: var(--header-bg);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            /* 固定页眉尺寸 */
+            height: 60px;
+            box-sizing: border-box;
+            min-height: 60px;
+            max-height: 60px;
+            /* 修改为相对定位，更适合iframe环境 */
+            position: relative;
+            z-index: 1000;
+            width: 100%;
+        }
+        #header-title {
+            /* 固定标题样式，防止影响页眉高度 */
+            font-size: 16px;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+        #minimize-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            /* 固定按钮尺寸 */
+            min-width: 24px;
+            min-height: 24px;
+            max-width: 24px;
+            max-height: 24px;
+            box-sizing: border-box;
+            z-index: 1001;
+        }
+        #minimize-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+        #chat-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            /* 移除margin-top，因为页眉现在是相对定位 */
+        }
+        #chat-box {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto; /* 垂直滚动条 */
+            overflow-x: hidden; /* 隐藏水平滚动条 */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth; /* 平滑滚动 */
+        }
+        .message {
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            max-width: 80%;
+            line-height: 1.5;
+            word-wrap: break-word; /* 长单词换行 */
+            word-break: break-word; /* 中文换行 */
+        }
+        .user-message {
+            background-color: var(--user-bg);
+            color: var(--text-light);
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+        .bot-message {
+            background-color: var(--bot-bg);
+            color: var(--text-dark);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+        .typing-indicator {
+            color: #999;
+            font-style: italic;
+            align-self: flex-start;
+        }
+        #input-form {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+            flex-shrink: 0; /* 防止输入框被压缩 */
+        }
+        #user-input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: var(--border-radius);
+            padding: 10px;
+            font-size: 14px;
+            margin-right: 10px;
+            box-sizing: border-box; /* 确保padding不会增加元素宽度 */
+            background-color: #fff; /* 确保背景色 */
+            color: #333; /* 确保文字颜色 */
+        }
+        #user-input:disabled {
+            background-color: #f5f5f5; /* 禁用时的背景色 */
+            color: #999; /* 禁用时的文字颜色 */
+        }
+        #send-button {
+            border: none;
+            background-color: var(--user-bg);
+            color: var(--text-light);
+            padding: 10px 15px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap; /* 防止按钮文字换行 */
+            flex-shrink: 0;
+        }
+        #send-button:hover {
+            opacity: 0.9;
+        }
+        #send-button:disabled {
+            background-color: #cccccc; /* 禁用时的背景色 */
+            cursor: not-allowed; /* 禁用时的光标 */
+            opacity: 0.6;
+        }
+        
+        /* 滚动条样式优化 */
+        #chat-box::-webkit-scrollbar {
+            width: 8px;
+        }
+        #chat-box::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        #chat-box::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        #chat-box::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* 确保在所有浏览器中都有滚动条 */
+        #chat-box {
+            scrollbar-width: thin;
+            scrollbar-color: #c1c1c1 #f1f1f1;
+        }
+        
+        /* 最小化状态 */
+        #minimized-container {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #007bff;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 1001;
+            border: none;
+            box-sizing: border-box;
+            align-items: center;
+            justify-content: center;
+            /* 添加过渡动画 */
+            transition: all 0.3s ease;
+            transform: scale(0);
+        }
+        
+        /* 最小化容器显示状态 */
+        #minimized-container.show {
+            transform: scale(1);
+        }
+        
+        /* 隐藏页眉和最小化按钮的类 */
+        .hide-header {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 页眉部分使用相对定位 -->
+    <div id="chat-header">
+        <span id="header-title">Haowise 智能助手</span>
+        <button id="minimize-btn" aria-label="最小化">−</button>
+    </div>
+    
+    <!-- 正常状态下的聊天窗口内容 -->
+    <div id="chat-container">
+        <div id="chat-content">
+            <div id="chat-box" role="log" aria-live="polite">
+                <div class="message bot-message">你好！有什么可以帮助你的吗？</div>
+            </div>
+            <form id="input-form">
+                <input type="text" id="user-input" placeholder="输入消息..." autocomplete="off" aria-label="输入消息">
+                <button type="submit" id="send-button" aria-label="发送消息">发送</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 最小化状态下的按钮 -->
+    <div id="minimized-container" aria-label="最大化">
+        +
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chat-container');
+        const chatHeader = document.getElementById('chat-header');
+        const minimizeBtn = document.getElementById('minimize-btn');
+        const minimizedContainer = document.getElementById('minimized-container');
+        const chatContent = document.getElementById('chat-content');
+        const chatBox = document.getElementById('chat-box');
+        const inputForm = document.getElementById('input-form');
+        const userInput = document.getElementById('user-input');
+        const headerTitle = document.getElementById('header-title');
+
+        const API_KEY = 'openapi-yyEpGvTnrwsCf2FGGIrw0we8jmCBj2otnPSbzSf8qF4Ka8a8WljdE';
+        const API_URL = 'https://fastgpt-pro.aibus88.com/api/v1/chat/completions';
+
+        let conversationHistory = [{
+            role: 'assistant',
+            content: '你好！有什么可以帮助你的吗？'
+        }];
+        let isMinimized = false;
+
+        // Toggle minimize state
+        function toggleMinimize() {
+            isMinimized = !isMinimized;
+            if (isMinimized) {
+                // 隐藏页眉和最小化按钮
+                chatHeader.classList.add('hide-header');
+                minimizeBtn.classList.add('hide-header');
+                
+                // 添加缩小动画效果
+                chatContainer.style.transform = 'scale(0)';
+                
+                // 延迟显示最小化按钮
+                setTimeout(() => {
+                    chatContainer.style.display = 'none';
+                    minimizedContainer.style.display = 'flex';
+                    // 添加放大动画效果
+                    setTimeout(() => {
+                        minimizedContainer.classList.add('show');
+                    }, 10);
+                }, 300);
+            } else {
+                // 隐藏最小化按钮并显示主容器
+                minimizedContainer.classList.remove('show');
+                
+                // 延迟显示主容器
+                setTimeout(() => {
+                    minimizedContainer.style.display = 'none';
+                    chatContainer.style.display = 'flex';
+                    // 添加放大动画效果
+                    setTimeout(() => {
+                        chatContainer.style.transform = 'scale(1)';
+                        
+                        // 显示页眉和最小化按钮
+                        chatHeader.classList.remove('hide-header');
+                        minimizeBtn.classList.remove('hide-header');
+                    }, 10);
+                }, 300);
+                
+                // Focus input when restoring
+                setTimeout(() => userInput.focus(), 400);
+            }
+        }
+
+        // Add event listeners
+        minimizeBtn.addEventListener('click', toggleMinimize);
+        minimizedContainer.addEventListener('click', toggleMinimize);
+
+        inputForm.addEventListener('submit', handleFormSubmit);
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            // 禁用输入框和发送按钮以防止重复提交
+            userInput.disabled = true;
+            const sendButton = document.getElementById('send-button');
+            sendButton.disabled = true;
+            
+            displayMessage(message, 'user');
+            conversationHistory.push({ role: 'user', content: message });
+            userInput.value = '';
+
+            fetchBotResponse();
+        }
+
+        function displayMessage(message, sender) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', `${sender}-message`);
+            messageElement.textContent = message;
+            chatBox.appendChild(messageElement);
+            
+            // 确保滚动到底部
+            scrollToBottom();
+            return messageElement;
+        }
+
+        function scrollToBottom() {
+            // 使用 requestAnimationFrame 确保在 DOM 更新后滚动
+            requestAnimationFrame(() => {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        }
+
+        async function fetchBotResponse() {
+            const typingIndicator = displayMessage('正在输入...', 'typing-indicator');
+            let botMessageElement = null;
+            let fullResponse = '';
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        messages: conversationHistory,
+                        stream: true,
+                        // model: 'your-model-name' // 如果需要指定模型，请取消此行注释
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+
+                chatBox.removeChild(typingIndicator);
+                botMessageElement = displayMessage('', 'bot');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n').filter(line => line.trim());
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.substring(6);
+                            if (dataStr === '[DONE]') {
+                                break;
+                            }
+                            try {
+                                const data = JSON.parse(dataStr);
+                                if (data.choices && data.choices[0].delta.content) {
+                                    fullResponse += data.choices[0].delta.content;
+                                    botMessageElement.textContent = fullResponse;
+                                    scrollToBottom();
+                                }
+                            } catch (err) {
+                                console.error('Error parsing stream data:', err);
+                            }
+                        }
+                    }
+                }
+                
+                if (fullResponse) {
+                    conversationHistory.push({ role: 'assistant', content: fullResponse });
+                }
+
+            } catch (error) {
+                console.error('Fetch error:', error);
+                chatBox.removeChild(typingIndicator);
+                displayMessage('抱歉，连接时出现错误。', 'bot');
+            } finally {
+                // 无论成功还是失败，都要确保可以继续输入
+                userInput.disabled = false;
+                const sendButton = document.getElementById('send-button');
+                sendButton.disabled = false;
+                userInput.focus();
+            }
+        }
+        
+        // 确保页面加载后滚动到底部
+        document.addEventListener('DOMContentLoaded', function() {
+            scrollToBottom();
+            // 确保初始时输入框可用
+            userInput.disabled = false;
+        });
+    </script>
+</body>
+</html>
