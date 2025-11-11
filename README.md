@@ -57,6 +57,18 @@ The application will be available on port 3000 by default. For production deploy
 
 For production deployment, make sure to set the appropriate environment variables in `.env.production` file.
 
+docker部署
+
+构建docker镜像
+
+docker build -t haowise-website:latest .
+
+启动docker容器
+
+docker run -d --name haowise-website -p 3000:3000 haowise-website:latest
+
+docker run -d --name haowise-website -p 3000:3000 --env-file .env.production haowise-website:latest
+
 ### Security Considerations
 
 - Ensure HTTPS is configured for production

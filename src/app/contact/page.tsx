@@ -106,10 +106,7 @@ export default function Contact() {
                   <div className="space-y-6">
                     <div>
                       <h3 className="text-xl font-semibold mb-2">{t('contactInfoAddress')}</h3>
-                      <p className="text-gray-600">
-                        {t('contactInfoAddress')}：{t('contactInfoAddressValue')}
-                      </p>
-                      <p className="text-gray-600">No. 90 Hui&#39;an Road, Liangxi District, Wuxi City, Jiangsu Province, China</p>
+                      <p className="text-gray-600">{t('contactInfoAddressValue')}</p>
                     </div>
                     <div>
                       <h3 className="text-xl font-semibold mb-2">{t('contactInfoEmail')}</h3>
@@ -120,12 +117,10 @@ export default function Contact() {
                       <p className="text-gray-600">+86 180 0152 1283</p>
                     </div>
                   </div>
-                  
+
                   <div className="mt-12">
                     <h3 className="text-xl font-semibold mb-4">{t('contactInfoHours')}</h3>
-                    <p className="text-gray-600">周一至周五: 9:00 - 18:00</p>
-                    <p className="text-gray-600">Saturday: 10:00 - 16:00</p>
-                    <p className="text-gray-600">Sunday: Closed</p>
+                    <div className="text-gray-600 whitespace-pre-line">{t('contactInfoHoursValue')}</div>
                   </div>
                 </div>
                 
